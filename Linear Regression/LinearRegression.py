@@ -20,6 +20,8 @@ class LinearRegression:
         X = np.hstack((np.ones(X.shape[0]).reshape(-1,1), X))  # Add bias term
         if self.model_type in ['linear', 'lasso', 'ridge']:
             self._regression(X, y, gradient)
+            if np.isnan(self.weights).any():
+                raise ValueError("NaN detected in weights! Reduce learning rate.")
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -47,16 +49,16 @@ class LinearRegression:
                 self.weights -= self.lr * dw
         else:
             if self.model_type == 'linear':
-                self.weights = np.linalg.inv(X.T @ X) @ X.T @ y
+                self.weights = np.linalg.pinv(X.T @ X) @ X.T @ y
             elif self.model_type == 'ridge':
-                self.weights = np.linalg.inv(X.T @ X + self.lambada * np.eye(X.shape[1])) @ X.T @ y
+                self.weights = np.linalg.pinv(X.T @ X + self.lambada * np.eye(X.shape[1])) @ X.T @ y
             elif self.model_type == 'lasso':
                 raise ValueError("Normal Equation doesn't support L1 regularization")
 
     def _polynomial_features(self, X, degree):
         n_samples, n_features = np.shape(X)
         def index_combinations():
-            combs = [combinations_with_replacement(range(n_features), i) for i in range(0, degree + 1)]
+            combs = [combinations_with_replacement(range(n_features), i) for i in range(1, degree + 1)]
             flat_combs = [item for sublist in combs for item in sublist]
             return flat_combs
         combinations = index_combinations()
@@ -138,7 +140,7 @@ plt.show()
 np.random.seed(42)
 x = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points between -5 and 5
 y = x**3 - 2 * x**2 + 3 * x + 5 + np.random.normal(0, 10, size=x.shape)  # Cubic relationship with noise
-model_cubic = LinearRegression(model_type='linear', lr=0.01, n_iters=1000, degree=3)
+model_cubic = LinearRegression(model_type='linear', lr=0.00001, n_iters=1000, degree=3)
 model_cubic.fit(x, y)
 x_test = np.linspace(-5, 5, 100).reshape(-1, 1)  # Test data for plotting
 y_pred_cubic = model_cubic.predict(x_test)
